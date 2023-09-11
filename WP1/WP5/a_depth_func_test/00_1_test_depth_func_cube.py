@@ -68,16 +68,16 @@ if __name__ == '__main__':
 
     main_dir = Path(os.getcwd())
 
-    n_cpus = 1
+    n_cpus = 6
     n_vecs = int(1e4)
 
     os.chdir(main_dir)
     np.random.seed(1)
     unit_vecs = gen_usph_vecs_mp(n_vecs, 2, n_cpus)
-    rand_pts = np.random.random(size=(500, 2))
-    rand_pts_2 = np.random.normal(size=(100, 2))
+    rand_pts = np.random.random(size=(10000, 2))
+    rand_pts_2 = np.random.normal(size=(1000, 2))
 
-    depth_ftn(rand_pts_2, rand_pts_2, ei)
+    # depth_ftn(rand_pts_2, rand_pts_2, ei)
     # s[depth_ftn_mp(rand_pts, rand_pts, unit_vecs, n_cpus) == 1]
     chull_pts = rand_pts_2
     hull = ConvexHull(chull_pts)
@@ -87,21 +87,28 @@ if __name__ == '__main__':
     # depths[115]
     # max(depths)
     corner_pts = chull_pts[depths == 1, :]
-    depth_pts_2 = chull_pts[depths == 2, :]
+    depth_pts_2 = chull_pts[((1<depths) & (depths<=4)), :]
     depth_pts_10perc = chull_pts[depths >= np.percentile(depths, 90)]
     depth_pts_50perc = chull_pts[depths >= np.percentile(depths, 50)]
     plt.ioff()
-    plt.figure(figsize=(4, 4), dpi=300)
+    
+    plt.figure(figsize=(5, 5), dpi=300)
     plt.scatter(chull_pts[:, 0], chull_pts[:, 1],
+                
                 #label='Data set',
                 alpha=0.50)
-
-    # plt.scatter(depth_pts_2[:, 0], depth_pts_2[:, 1],
-    # label='rands (d==2)', alpha=0.7)
+    
+    plt.axvline(chull_pts[:, 0][4],
+                linestyle='--', label='hyperplane',
+                c='m', alpha=0.5)
+        
+    
     # plt.scatter(depth_pts_50perc[:, 0], depth_pts_50perc[:, 1],
     # label='50perc', alpha=0.7)
     plt.scatter(depth_pts_10perc[:, 0], depth_pts_10perc[:, 1],
-                label='Data center',
+                c='b',
+                
+                #label='Data center',
                 alpha=0.7)
     # plt.scatter(unit_vecs[:, 0], unit_vecs[:, 1], alpha=0.7)
     for simplex in hull.simplices:
@@ -111,27 +118,28 @@ if __name__ == '__main__':
                  alpha=0.75)
 
     plt.scatter(corner_pts[:, 0], corner_pts[:, 1],
-                label='Depth (d==1)', alpha=0.9, c='lime',
+                label='D=1', alpha=0.9, c='lime',
                 marker='d')
 
-    plt.axvline(chull_pts[:, 0][4],
-                linestyle='--', label='hyperplane',
-                c='m', alpha=0.5)
+
 
     plt.scatter(chull_pts[:, 0][4], chull_pts[:, 1][4], marker='X',
-                s=100, c='r',
+                s=100, c='k',
                 label='d=%d' % depths[
                     np.where(np.abs(chull_pts[:, 0] -
                                     chull_pts[:, 0][4]) < 0.0001)[0]])
-
+    
+    plt.scatter(depth_pts_2[:, 0], depth_pts_2[:, 1],
+                label='1< D <=4', alpha=0.7, s=100,
+                c='r', marker='X')
     # depths[np.where(np.abs(chull_pts[:,0]-0.64575154)<0.0001)[0]]
     plt.legend(framealpha=0.5, ncol=2)
     plt.grid(alpha=0.5)
     plt.tight_layout()
 
-    plt.show()
+    # plt.show()
     plt.savefig(
-        r'X:\staff\elhachem\PhD_Dissertation\thesis-tex-files\Pictures\depth_ex.png')
+        r'X:\staff\elhachem\2023_09_01_ViTaMins\Meetings\depth_ex.png')
     # plt.show()
     STOP = timeit.default_timer()  # Ending time
     print(('\n#### Done with everything on %s.\nTotal run time was'

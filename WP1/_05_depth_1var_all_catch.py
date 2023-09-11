@@ -19,8 +19,13 @@ from pathlib import Path
 from scipy.spatial import cKDTree
 from scipy.spatial import ConvexHull
 import tqdm
-from depth_funcs import (
+# from depth_funcs import (
+    # gen_usph_vecs_norm_dist_mp as gen_usph_vecs_mp, depth_ftn_mp)
+
+from depth_funcs_new import (
     gen_usph_vecs_norm_dist_mp as gen_usph_vecs_mp, depth_ftn_mp)
+
+# from depth_funcs_new import depth_ftn_mp
 
 modulepath = r'X:\staff\elhachem\GitHub\ClimXtreme\WP2\a_analyse_dwd'
 sys.path.append(modulepath)
@@ -37,16 +42,16 @@ def main():
     if not os.path.exists(out_save_dir):
         os.mkdir(out_save_dir)
     
-    var_to_test = 'discharge_vol'
+    var_to_test = 'precipitation'
     
     path_to_data = data_path / (r'Data/CAMELS_GB_1440min_1970_2015_%s.h5' % var_to_test)
 
     #===========================================================================
     # Depth func parameters
     n_vecs = int(1e4)
-    n_cpus = 3
+    n_cpus = 5
     
-    neighbor_to_chose = 2
+    neighbor_to_chose = 10
     
     
     beg_date = '1970-01-01'
@@ -79,8 +84,8 @@ def main():
     idx_list = []
     
     plt.ioff()
-    plt.figure(figsize=(8, 8), dpi=300)
-    for catch_id in tqdm.tqdm(catch_ids[1:100]):
+    plt.figure(figsize=(5, 5), dpi=300)
+    for catch_id in tqdm.tqdm(catch_ids):
         print(catch_id)
         # break
         df_stn = data_hdf5.get_pandas_dataframe_between_dates(
@@ -93,7 +98,7 @@ def main():
 
         (xdwd, ydwd) = (df_coords.loc[catch_id, 'X'], df_coords.loc[catch_id, 'Y'])
 
-        distances, indices = catch_points_tree.query(np.array([xdwd, ydwd]), k=neighbor_to_chose + 100)
+        distances, indices = catch_points_tree.query(np.array([xdwd, ydwd]), k=neighbor_to_chose)
 
         # stn_near = list(np.array(dwd_ids)[indices[:7]])
         
@@ -149,7 +154,7 @@ def main():
                          alpha=0.25,  linestyle='--',  linewidth=1)
     
             plt.plot(points[:, 0], points[:, 1], '.', color='r')
-            plt.scatter(xdwd, ydwd, marker='X', color='b')
+            # plt.scatter(xdwd, ydwd, marker='X', color='b')
     
             #print(stn_near)
     
@@ -157,30 +162,25 @@ def main():
         df_nearby_resampled_norm = df_stn_near_period.loc[
             df_stn.index.intersection(df_stn_near_period.index), :].dropna(axis=0, how='any')
         # daily
-        # for _col in df_nearby_resampled_norm.columns:
-        #
-        #     df_nearby_resampled_norm.loc[
-        #         df_nearby_resampled_norm[_col] == 0, _col
-        #     ] = np.random.random() * np.random.uniform(
-        #         0.02, 0.1,
-        #         len(df_nearby_resampled_norm.loc[
-        #             df_nearby_resampled_norm[_col] == 0]))
-
+        for _col in df_nearby_resampled_norm.columns:
+        
+            df_nearby_resampled_norm.loc[df_nearby_resampled_norm[_col] == 0, _col
+            ] = np.random.random() * np.random.uniform(0.02, 0.1, len(df_nearby_resampled_norm.loc[df_nearby_resampled_norm[_col] == 0]))
+        # df_nearby_resampled_norm
         df_pos = df_nearby_resampled_norm
         if len(df_pos.index) > 10:
-
+        
             tot_refr_var_arr = df_pos.values.astype(float).copy('c')
-
-            usph_vecs = gen_usph_vecs_mp(
-                n_vecs, df_pos.columns.size, n_cpus)
+            # tot_refr_var_arr.T.shape
+            usph_vecs = gen_usph_vecs_mp(n_vecs, df_pos.columns.size, n_cpus)
             depths2 = depth_ftn_mp(tot_refr_var_arr, tot_refr_var_arr, usph_vecs, n_cpus, 1)
             print('done calculating depth')
-
+        
             df_pcp_depth = pd.DataFrame(index=df_pos.index, data=depths2,
                                         columns=['d'])
-
+        
             df_low_d = df_pcp_depth[(df_pcp_depth > 1) & (
-                df_pcp_depth < 4)].dropna()
+                df_pcp_depth <= 4)].dropna()
             # df_pcp_depth[df_pcp_depth.values == 1].dropna()
             # df_low_d.shape[0] / df_pcp_depth.shape[0]
             de = df_pos.loc[df_low_d.index]  # .sum(axis=1)#.max()
@@ -247,10 +247,10 @@ def main():
 
         plt.ioff()
         fig, ax1 = plt.subplots(1, 1, figsize=(12, 12), dpi=100)
-        pcp = ax1.scatter(xcoords, ycoords, c=data_event.values, marker='X', s=50,
-                          vmin=0.5, cmap=plt.get_cmap('Blues'))
+        pcp = ax1.scatter(xcoords, ycoords, c=data_event.values, marker='X', s=data_event.values,
+                          vmin=0.5, cmap=plt.get_cmap('jet_r'))
         ax1.scatter(df_coords.loc[df_.columns, 'X'], df_coords.loc[df_.columns, 'Y'], c=df_.values,
-                    marker='X', s=50, cmap=plt.get_cmap('Blues'), vmin=0.5)
+                    marker='X', s=50, cmap=plt.get_cmap('jet_r'), vmin=0.5)
 
         fig.colorbar(pcp, shrink=0.75, label='mm/hr')
         ax1.grid(alpha=0.25)
