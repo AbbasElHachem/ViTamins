@@ -37,7 +37,7 @@ def main():
     
     data_path = Path(r'X:\staff\elhachem\2023_09_01_ViTaMins')
     # =============================================================
-    out_save_dir = data_path / r"Results\01_DD_plots"
+    out_save_dir = data_path / r"Results\04_Depth_space"
     
     if not os.path.exists(out_save_dir):
         os.mkdir(out_save_dir)
@@ -51,7 +51,7 @@ def main():
     n_vecs = int(1e4)
     n_cpus = 5
     
-    neighbor_to_chose = 10
+    neighbor_to_chose = 9
     
     
     beg_date = '1970-01-01'
@@ -83,183 +83,198 @@ def main():
     df_depth_all = pd.DataFrame(data=data_zero, index=date_range, columns=catch_ids)
     idx_list = []
     
-    plt.ioff()
-    plt.figure(figsize=(5, 5), dpi=300)
-    for catch_id in tqdm.tqdm(catch_ids):
-        print(catch_id)
-        # break
-        df_stn = data_hdf5.get_pandas_dataframe_between_dates(
-            catch_id, event_start=beg_date, event_end=end_date)
-        df_stn = df_stn.dropna(how='all')
-        # normalize by median
-        
-        # df_stn_norm_orig = df_stn# / df_stn.median()
-        # df_stn[df_stn > 90] = np.nan
-
-        (xdwd, ydwd) = (df_coords.loc[catch_id, 'X'], df_coords.loc[catch_id, 'Y'])
-
-        distances, indices = catch_points_tree.query(np.array([xdwd, ydwd]), k=neighbor_to_chose)
-
-        # stn_near = list(np.array(dwd_ids)[indices[:7]])
-        
-        # indices = indices[distances > 0]
-        # distances = distances[distances > 0]
-        stn_near = list(np.array(catch_ids)[indices])
-        assert len(stn_near) == len(distances)
-        
-        
-        df_neighbors = pd.DataFrame(index=df_stn.index, columns=stn_near)
-        
-        nbr_idx = 0
-        # max_nbr = 10
-        # start_idx = 0
-        # end_idx = 6
-        
-        usph_vecs = gen_usph_vecs_mp(n_vecs, df_stn.columns.size, n_cpus)
-        idx_list = []
-    
-        for _st in stn_near:
-            if nbr_idx < 9:
-                try:
-                    df_st = data_hdf5.get_pandas_dataframe_between_dates(
-                        _st,
-                        event_start=df_neighbors.index[0],
-                        event_end=df_neighbors.index[-1]).dropna()
-                        
-
-                    cmn_idx = df_neighbors.index.intersection(
-                        df_st.index)
-    
-                    if cmn_idx.size > 0.9 * df_stn.index.size:
-                        # print(df_st.head())
-    
-                        df_neighbors.loc[cmn_idx, _st] = df_st.loc[cmn_idx, :].values.ravel()
-                        nbr_idx += 1
-                        print(nbr_idx)
-                except Exception as msg:
-                    print(msg)
-                    continue
-                
-        df_stn_near_period = df_neighbors.dropna(how='any', axis=1)
-    
-        
-        (xnear, ynear) = (df_coords.loc[df_stn_near_period.columns, 'X'],
-            df_coords.loc[df_stn_near_period.columns, 'Y'])
-        if len(df_stn_near_period.columns) > 3:
-            points = np.array([(x, y) for x, y in zip(xnear, ynear)])
-            hull = ConvexHull(points)
-    
-            for simplex in hull.simplices:
-                plt.plot(points[simplex, 0],  points[simplex, 1], 'grey',
-                         alpha=0.25,  linestyle='--',  linewidth=1)
-    
-            plt.plot(points[:, 0], points[:, 1], '.', color='r')
-            # plt.scatter(xdwd, ydwd, marker='X', color='b')
-    
-            #print(stn_near)
-    
-    
-        df_nearby_resampled_norm = df_stn_near_period.loc[
-            df_stn.index.intersection(df_stn_near_period.index), :].dropna(axis=0, how='any')
-        # daily
-        for _col in df_nearby_resampled_norm.columns:
-        
-            df_nearby_resampled_norm.loc[df_nearby_resampled_norm[_col] == 0, _col
-            ] = np.random.random() * np.random.uniform(0.02, 0.1, len(df_nearby_resampled_norm.loc[df_nearby_resampled_norm[_col] == 0]))
-        # df_nearby_resampled_norm
-        df_pos = df_nearby_resampled_norm
-        if len(df_pos.index) > 10:
-        
-            tot_refr_var_arr = df_pos.values.astype(float).copy('c')
-            # tot_refr_var_arr.T.shape
-            usph_vecs = gen_usph_vecs_mp(n_vecs, df_pos.columns.size, n_cpus)
-            depths2 = depth_ftn_mp(tot_refr_var_arr, tot_refr_var_arr, usph_vecs, n_cpus, 1)
-            print('done calculating depth')
-        
-            df_pcp_depth = pd.DataFrame(index=df_pos.index, data=depths2,
-                                        columns=['d'])
-        
-            df_low_d = df_pcp_depth[(df_pcp_depth > 1) & (
-                df_pcp_depth <= 4)].dropna()
-            # df_pcp_depth[df_pcp_depth.values == 1].dropna()
-            # df_low_d.shape[0] / df_pcp_depth.shape[0]
-            de = df_pos.loc[df_low_d.index]  # .sum(axis=1)#.max()
-            # de.iloc[:10, :]
-            de[de < 0.1] = 0
-            # de.loc[de.sum(axis=1).sort_values().in
-            df_depth_all.loc[de.index, de.columns] += 1
-            idx_list.append(de.index)
+    if not os.path.exists(
+        r"X:\staff\elhachem\2023_09_01_ViTaMins\Results\04_Depth_space\1var_all_catchs.csv"):
+        pass
+    if True:
+        plt.ioff()
+        plt.figure(figsize=(5, 5), dpi=300)
+        for catch_id in tqdm.tqdm(catch_ids):
+            print(catch_id)
+            # break
+            df_stn = data_hdf5.get_pandas_dataframe_between_dates(
+                catch_id, event_start=beg_date, event_end=end_date)
+            df_stn = df_stn.dropna(how='all')
+            # normalize by median
             
-                # break
-    plt.grid(alpha=0.25)
-    plt.axis('equal')
-    plt.tight_layout()
-    plt.savefig(os.path.join(out_save_dir, 'hulls_%s_22a.png' % catch_id),
-        bbox_inches='tight')
-    plt.close()
+    
+            (xdwd, ydwd) = (df_coords.loc[catch_id, 'X'], df_coords.loc[catch_id, 'Y'])
+    
+            distances, indices = catch_points_tree.query(np.array([xdwd, ydwd]), k=neighbor_to_chose)
+    
+            stn_near = list(np.array(catch_ids)[indices])
+            assert len(stn_near) == len(distances)
+            
+            
+            df_neighbors = pd.DataFrame(index=df_stn.index, columns=stn_near)
+            
+            nbr_idx = 0
+            
+            usph_vecs = gen_usph_vecs_mp(n_vecs, df_stn.columns.size, n_cpus)
+            idx_list = []
+        
+            for _st in stn_near:
+                if nbr_idx < 9:
+                    try:
+                        df_st = data_hdf5.get_pandas_dataframe_between_dates(
+                            _st,
+                            event_start=df_neighbors.index[0],
+                            event_end=df_neighbors.index[-1]).dropna()
+                            
+    
+                        cmn_idx = df_neighbors.index.intersection(
+                            df_st.index)
+        
+                        if cmn_idx.size > 0.9 * df_stn.index.size:
+                            # print(df_st.head())
+        
+                            df_neighbors.loc[cmn_idx, _st] = df_st.loc[cmn_idx, :].values.ravel()
+                            nbr_idx += 1
+                            print(nbr_idx)
+                    except Exception as msg:
+                        print(msg)
+                        continue
+                    
+            df_stn_near_period = df_neighbors.dropna(how='any', axis=1)
+        
+            
+            (xnear, ynear) = (df_coords.loc[df_stn_near_period.columns, 'X'],
+                df_coords.loc[df_stn_near_period.columns, 'Y'])
+            if len(df_stn_near_period.columns) > 3:
+                points = np.array([(x, y) for x, y in zip(xnear, ynear)])
+                hull = ConvexHull(points)
+        
+                for simplex in hull.simplices:
+                    plt.plot(points[simplex, 0],  points[simplex, 1], 'grey',
+                             alpha=0.25,  linestyle='--',  linewidth=1)
+        
+                plt.plot(points[:, 0], points[:, 1], '.', color='r')
+                # plt.scatter(xdwd, ydwd, marker='X', color='b')
+        
+                #print(stn_near)
+        
+        
+            df_nearby_resampled_norm = df_stn_near_period.loc[
+                df_stn.index.intersection(df_stn_near_period.index), :].dropna(axis=0, how='any')
+            # daily
+            for _col in df_nearby_resampled_norm.columns:
+            
+                df_nearby_resampled_norm.loc[df_nearby_resampled_norm[_col] == 0, _col
+                ] = np.random.random() * np.random.uniform(0.02, 0.1, len(df_nearby_resampled_norm.loc[df_nearby_resampled_norm[_col] == 0]))
+            # df_nearby_resampled_norm
+            df_pos = df_nearby_resampled_norm
+            if len(df_pos.index) > 10:
+            
+                tot_refr_var_arr = df_pos.values.astype(float).copy('c')
+                # tot_refr_var_arr.T.shape
+                usph_vecs = gen_usph_vecs_mp(n_vecs, df_pos.columns.size, n_cpus)
+                depths2 = depth_ftn_mp(tot_refr_var_arr, tot_refr_var_arr, usph_vecs, n_cpus, 1)
+                print('done calculating depth')
+            
+                df_pcp_depth = pd.DataFrame(index=df_pos.index, data=depths2,
+                                            columns=['d'])
+            
+                df_low_d = df_pcp_depth[(df_pcp_depth > 1) & (
+                    df_pcp_depth <= 4)].dropna()
+                # df_pcp_depth[df_pcp_depth.values == 1].dropna()
+                # df_low_d.shape[0] / df_pcp_depth.shape[0]
+                de = df_pos.loc[df_low_d.index]  # .sum(axis=1)#.max()
+                # de.iloc[:10, :]
+                de[de < 0.1] = 0
+                
+                # de.sum(axis=1).plot(ylabel='Sum over 9 stations', grid=True)
+                plt.ioff()
+                fig = de.sum(axis=1).sort_values().plot(ylabel='Sum over 9 stations - Pcp mm/d', grid=True, figsize=(5, 4), c='r')
+                plt.savefig(r'X:\staff\elhachem\2023_09_01_ViTaMins\Results\04_Depth_space\sum_over_9stns.png',
+                            dpi=300, bbox_inches='tight')
+                plt.close()
+                de.loc[de.sum(axis=1).sort_values().index[320]]
+                # plt.show()
+                # de.loc[de.sum(axis=1).sort_values().in
+                df_depth_all.loc[de.index, de.columns] += 1
+                idx_list.append(de.index)
+                
+                    # break
+        plt.grid(alpha=0.25)
+        plt.axis('equal')
+        plt.tight_layout()
+        plt.savefig(os.path.join(out_save_dir, 'hulls_%s_22a.png' % catch_id),
+            bbox_inches='tight')
+        plt.close()
+    
+        print('done')
+    
+        df_results = df_depth_all[df_depth_all.sum(axis=1) > 0]
+        
+        df_results.to_csv(r"X:\staff\elhachem\2023_09_01_ViTaMins\Results\04_Depth_space\1var_all_catchs.csv")
+    else:
+        df_results = pd.read_csv(r"X:\staff\elhachem\2023_09_01_ViTaMins\Results\04_Depth_space\1var_all_catchs.csv",
+                                 index_col=0, parse_dates=True)
+        
 
-    print('done')
+    # percent_unusual = 100 * (
+    #     df_results.index.shape[0] / df_depth_all.index.shape[0])
+    # print(percent_unusual)
+    # pcp_data_events = pd.DataFrame(index=df_results.index,
+    #                                columns=df_results.columns)
+    #
+    # for ii, _idx in enumerate(df_results.index):
+    #     print(_idx, ii, len(df_results.index))
+    #     # break
+    #     # try:
+    #     ids_event = df_results.columns[
+    #             np.where(df_results.loc[_idx, :] > 0)[0].astype(int)]
+    #     # if len(ids_event) > 7:
+    #     # print('dd')
+    #     df_depth_low = data_hdf5.get_pandas_dataframe_for_date(
+    #             ids_event, event_date=_idx)
+    #     pcp_data_events.loc[_idx, ids_event] = df_depth_low.values
 
-    df_results = df_depth_all[df_depth_all.sum(axis=1) > 0]
-    # df_results.sum(axis=1).max()
+    max_Events = df_results.sum(axis=1).sort_values()
 
-    # dwd_ids[:1000][
-    # list(np.where(df_results.iloc[0, :] > 0)[0].astype(int))]
-
-  # len(idx_list)
-    percent_unusual = 100 * (
-        df_results.index.shape[0] / df_depth_all.index.shape[0])
-    print(percent_unusual)
-    pcp_data_events = pd.DataFrame(index=df_results.index,
-                                   columns=df_results.columns)
-
-    for ii, _idx in enumerate(df_results.index):
-        print(_idx, ii, len(df_results.index))
-        # break
-        # try:
-        ids_event = df_results.columns[
-                np.where(df_results.loc[_idx, :] > 0)[0].astype(int)]
-        # if len(ids_event) > 7:
-        # print('dd')
-        df_depth_low = data_hdf5.get_pandas_dataframe_for_date(
-                ids_event, event_date=_idx)
-        pcp_data_events.loc[_idx, ids_event] = df_depth_low.values
-        # except Exception as msg:
-            # print(msg)
-            # continue
-    # pcp_data_events.dropna(how='all', axis=1, inplace=True)
-    # plot()
-    # pcp_data_events.read_csv(os.path.join(out_save_dir, 'df_unusuals.csv'), sep=';', index_col=0,
-                             # parse_dates=True, infer_datetime_format=True)
-    # pcp_data_events.sum(axis=1).plot(legend=False)
-    max_Events = pcp_data_events.sum(axis=1).sort_values()
-
-    max_event = pcp_data_events.loc[
+    max_event = df_results.loc[
         max_Events.index[-10:], :].dropna(axis=1, how='all').sort_index()  # .plot()
 
     for _idx in max_event.index:
         data_event = max_event.loc[_idx, :].dropna()
-        xcoords = df_coords.loc[data_event.index, 'X']
-        ycoords = df_coords.loc[data_event.index, 'Y']
-
+        # xcoords = df_coords.loc[:, 'X']
+        # ycoords = df_coords.loc[:, 'Y']
+        
+        xcoords = df_coords.loc[catch_ids, 'X']
+        ycoords = df_coords.loc[catch_ids, 'Y']
+        # break
         df_ = data_hdf5.get_pandas_dataframe_for_date(
             catch_ids, event_date=str(_idx))
 
         plt.ioff()
-        fig, ax1 = plt.subplots(1, 1, figsize=(12, 12), dpi=100)
-        pcp = ax1.scatter(xcoords, ycoords, c=data_event.values, marker='X', s=data_event.values,
-                          vmin=0.5, cmap=plt.get_cmap('jet_r'))
-        ax1.scatter(df_coords.loc[df_.columns, 'X'], df_coords.loc[df_.columns, 'Y'], c=df_.values,
-                    marker='X', s=50, cmap=plt.get_cmap('jet_r'), vmin=0.5)
+        fig, ax1 = plt.subplots(1, 1, figsize=(4, 3), dpi=300)
+        pcp = ax1.scatter(xcoords, ycoords, c=df_.values, s=df_.values, marker='X',
+                          vmin=0., cmap=plt.get_cmap('jet_r'))
 
-        fig.colorbar(pcp, shrink=0.75, label='mm/hr')
+        fig.colorbar(pcp, ax=ax1, shrink=0.75, label='mm/day')
+        ax1.grid(alpha=0.25)
+        ax1.axis('equal')
+        ax1.set_title('%s' % (_idx))
+        plt.savefig(os.path.join(out_save_dir, 'max_event_sum_%s_dwd.png'
+                         % str(_idx).replace(':', '_').replace(' ', '_')), bbox_inches='tight')
+
+        plt.close()
+        
+        plt.ioff()
+        fig, ax1 = plt.subplots(1, 1, figsize=(5, 4), dpi=300)
+        pcp = ax1.plot(df_.columns, df_.values.ravel(), alpha=0.75, c='b')
         ax1.grid(alpha=0.25)
         ax1.set_title('%s' % (_idx))
         plt.tight_layout()
-        plt.savefig(os.path.join(out_save_dir, 'max_event_sum_%s_dwd.png'
-                         % str(_idx).replace(':', '_').replace(' ', '_')))
+        ax1.set_ylabel('Precipitation mm/day')
+        ax1.set_xticks(df_.columns[::50])
+        ax1.set_xticklabels(df_.columns[::50], rotation=47)
+        # fig.autofmt_xdate()
+        plt.savefig(os.path.join(out_save_dir, 'max_event_space_%s_dwd.png'
+                         % str(_idx).replace(':', '_').replace(' ', '_')), bbox_inches='tight')
 
         plt.close()
+        
         break#
 
 

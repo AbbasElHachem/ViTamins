@@ -42,10 +42,13 @@ def main():
     if not os.path.exists(out_save_dir):
         os.mkdir(out_save_dir)
     
-    variables = ['precipitation', 'pet', 'temperature', 'discharge_vol', 
+    variables = ['precipitation', 'pet', 'peti','temperature', 'discharge_vol', 
                  'humidity', 'longwave_rad','windspeed', 'discharge_spec']
-    for var_to_test in variables:
     
+    variables = ['discharge_vol']
+    
+    for var_to_test in variables:
+        var_to_test = 'discharge_vol'
         path_to_data = data_path / (r'Data/CAMELS_GB_1440min_1970_2015_%s.h5' % var_to_test)
     
         #===========================================================================
@@ -63,26 +66,30 @@ def main():
     
         
         plt.ioff()
-        plt.figure(figsize=(6, 6), dpi=300)
+        plt.figure(figsize=(5, 4), dpi=300)
         for catch_id in tqdm.tqdm(catch_ids):
+            # if catch_id == '14002':
             # print(catch_id)
             # break
             df_stn = data_hdf5.get_pandas_dataframe(catch_id)
             df_stn = df_stn.dropna(how='all')
-            
+                # plt.ioff()
+                # fig = df_stn.loc['2011-07-03 00:00:00':'2011-07-20 00:00:00'].plot(
+                    # figsize=(5, 4),  c='r', grid=True, marker='D', markersize=5, ylabel='m3/s')
+                # plt.savefig(r"X:\staff\elhachem\2023_09_01_ViTaMins\Results\00_Data_quality\event_%s.png" % (var_to_test), bbox_inches='tight', dpi=300)
             vals_q99 = df_stn.quantile(0.99)[0]
-            
+                
             df_stn_max = df_stn[df_stn > vals_q99].dropna()
-            plt.scatter(df_stn_max.index, df_stn_max.values, alpha=0.1, facecolor='gray',edgecolor='darkred', s=15)
+            plt.scatter(df_stn_max.index, df_stn_max.values, alpha=0.1, facecolor='k',edgecolor='gray', s=15)
         
         plt.grid(alpha=0.5)
         plt.ylabel('%s' % var_to_test, fontsize=10)
         
-        plt.xlabel('Time index')
-        
-        # plt.legend(loc=0)
-        plt.savefig(r"X:\staff\elhachem\2023_09_01_ViTaMins\Results\00_Data_quality\scatter_%s.png" % (var_to_test), bbox_inches='tight')
-        plt.close()
+        # plt.xlabel('Time index')
+        #
+        # # plt.legend(loc=0)
+        # plt.savefig(r"X:\staff\elhachem\2023_09_01_ViTaMins\Results\00_Data_quality\scatter_%s.png" % (var_to_test), bbox_inches='tight')
+        # plt.close()
         # normalize by median
         
         # df_stn_norm_orig = df_stn# / df_stn.median()

@@ -59,10 +59,10 @@ def main():
     #===========================================================================
     # Depth func parameters
     n_vecs = int(1e4)
-    n_cpus = 6
+    n_cpus = 7
     use_red_var = False
     min_D_Val = 4
-    do_plot = True
+    do_plot = False
     #===========================================================================
     
     
@@ -95,16 +95,21 @@ def main():
             df_in = pd.read_csv(df_stn, sep=',', index_col=0, engine='c', low_memory=False)
             df_in.index = pd.to_datetime(df_in.index, format='%Y-%m-%d')
             df_in.dropna(how='any', inplace=True)
-            df_in_diff = df_in.diff(2).dropna()
-            df_in_diff_pos = df_in_diff[df_in_diff.loc[:, 'precipitation'] > 1]
-            if use_red_var:
-                df_in = df_in_diff_pos.loc[:, var_red]
-            else:
-                df_in = df_in_diff_pos.loc[:, variables]
-#        
-            usph_vecs = gen_usph_vecs_mp(n_vecs, len(df_in.columns), n_cpus)
+            df_in_diff = df_in.diff(1).dropna()
             
-            df_in_vals = df_in_diff_pos.values.astype(float).copy('c')
+            df_q = df_in_diff[df_in_diff.loc[:, 'discharge_vol'] > 0].max()*0.25
+            
+            df_in_diff_pos = df_in_diff[df_in_diff.loc[:, 'discharge_vol'] > df_q.discharge_vol]
+            
+            df_in_pos = df_in.loc[df_in_diff_pos.index, :]
+            if use_red_var:
+                df_in = df_in_pos.loc[:, var_red]
+            else:
+                df_in = df_in_pos.loc[:, variables]
+#            
+            usph_vecs = gen_usph_vecs_mp(n_vecs, len(df_in_pos.columns), n_cpus)
+            
+            df_in_vals = df_in_pos.values.astype(float).copy('c')
             depths_da_da = depth_ftn_mp_v2(df_in_vals, df_in_vals, usph_vecs, n_cpus)
             
             
@@ -117,6 +122,7 @@ def main():
             df_in_low_d1 = df_in_diff_pos.iloc[idx_d1,:]
             df_in_low_d = df_in_diff_pos.iloc[idx_low_d,:]
             
+            df_in_low_d1 = df_in.loc[df_in_low_d1.index,:]
             df_in_low_d = df_in.loc[df_in_low_d.index,:]
             
             # low_depth = depths_da_da[depths_da_da < 10]
@@ -165,7 +171,7 @@ def main():
                     ax.set_ylabel('Daily values')
                     ax.grid(alpha=0.5)
                     ax.legend(loc=0)
-                    plt.savefig(out_save_dir_stn / (r'_%s_%s_pos.png' % (stn, _col)), bbox_inches='tight')
+                    plt.savefig(out_save_dir_stn / (r'_%s_%s_pos_dQ5.png' % (stn, _col)), bbox_inches='tight')
                     plt.close('all')
                 
                 
@@ -175,88 +181,88 @@ def main():
                 # disch vs wind
                 # disch vs temp
                 # disch vs hum
-                print('Plotting')
-                plt.ioff()
-                fig, ((ax1, ax2, ax3),
-                      (ax5, ax6, ax7)) = plt.subplots(nrows=2, ncols=3, figsize=(12, 8), dpi=200, sharex=True)
-                              
-                ax1.scatter(df_in.loc[:,'discharge_vol'].values,
-                           df_in.loc[:, 'precipitation'].values, facecolor='gray', edgecolor='k', alpha=0.2, label='n=%d' % df_in.index.size)
+            print('Plotting')
+            plt.ioff()
+            fig, ((ax1, ax2, ax3),
+                  (ax5, ax6, ax7)) = plt.subplots(nrows=2, ncols=3, figsize=(12, 8), dpi=200, sharex=True)
+                          
+            ax1.scatter(df_in.loc[:,'discharge_vol'].values,
+                       df_in.loc[:, 'precipitation'].values, facecolor='gray', edgecolor='k', alpha=0.2, label='n=%d' % df_in.index.size)
+            
+            
+            ax1.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
+                       df_in_low_d.loc[:, 'precipitation'].values, facecolor='r', edgecolor='darkred', label='n=%d' % df_in_low_d.index.size)
+            # ax1.scatter(df_in_low_d1.loc[:,'discharge_vol'].values,
+                        # df_in_low_d1.loc[:, 'precipitation'].values, marker='o', facecolor='b', edgecolor='darkred', label='n=%d' % df_in_low_d.index.size)
+            
+            
+            ax1.set_xlabel('Q vol')
+            ax1.set_ylabel('Pcp')
+            
+            ax1.grid(alpha=0.5)
+            ax1.legend(loc=0)
+            ax2.scatter(df_in.loc[:,'discharge_vol'].values,
+                       df_in.loc[:, 'pet'].values, facecolor='gray', edgecolor='k', alpha=0.2)
+            ax2.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
+                       df_in_low_d.loc[:, 'pet'].values, facecolor='b', edgecolor='darkblue', marker='o')
+            # ax2.scatter(df_in_low_d1.loc[:,'discharge_vol'].values,
+                        # df_in_low_d1.loc[:, 'pet'].values, marker='o', facecolor='g', edgecolor='darkred', label='n=%d' % df_in_low_d.index.size)
+            
+            ax2.set_xlabel('Q vol')
+            ax2.set_ylabel('Pet')
+            
+            ax2.grid(alpha=0.5)
+            
+            ax3.scatter(df_in.loc[:,'discharge_vol'].values,
+                       df_in.loc[:, 'temperature'].values, facecolor='gray', edgecolor='k', alpha=0.2)
+            ax3.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
+                       df_in_low_d.loc[:, 'temperature'].values, facecolor='g', edgecolor='darkgreen', marker='D')
+            
+            ax3.set_xlabel('Q vol')
+            ax3.set_ylabel('temperature')
+            ax3.grid(alpha=0.5)
+            
+            
+            ax5.scatter(df_in.loc[:,'discharge_vol'].values,
+                       df_in.loc[:, 'humidity'].values, facecolor='gray', edgecolor='k', alpha=0.2)
+            ax5.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
+                       df_in_low_d.loc[:, 'humidity'].values, facecolor='orange', edgecolor='darkorange', marker='X')
+            
+            ax5.set_xlabel('Q vol')
+            ax5.set_ylabel('humidity')
+            ax5.grid(alpha=0.5)
+            
+            ax6.scatter(df_in.loc[:,'discharge_vol'].values,
+                       df_in.loc[:, 'longwave_rad'].values, facecolor='gray', edgecolor='k', alpha=0.2)
+            ax6.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
+                       df_in_low_d.loc[:, 'longwave_rad'].values, facecolor='g', edgecolor='darkgreen', marker='D')
+            
+            ax6.set_xlabel('Q vol')
+            ax6.set_ylabel('longwave_rad')
+            ax6.grid(alpha=0.5)
+            
+            ax7.scatter(df_in.loc[:,'discharge_vol'].values,
+                       df_in.loc[:, 'windspeed'].values, facecolor='gray', edgecolor='k', alpha=0.2)
+            ax7.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
+                       df_in_low_d.loc[:, 'windspeed'].values, facecolor='m', edgecolor='pink')
+            
+            ax7.set_xlabel('Q vol')
+            ax7.set_ylabel('windspeed')
+            ax7.grid(alpha=0.5)
+            
+            plt.tight_layout()
+            
+            plt.savefig(out_save_dir_stn / (r'low_d_evt_%s22_posdQ.png' % (stn)), bbox_inches='tight')
+            plt.close('all')
                 
                 
-                ax1.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
-                           df_in_low_d.loc[:, 'precipitation'].values, facecolor='r', edgecolor='darkred', label='n=%d' % df_in_low_d.index.size)
-                # ax1.scatter(df_in_low_d1.loc[:,'discharge_vol'].values,
-                           # df_in_low_d1.loc[:, 'precipitation'].values, marker='o', facecolor='b', edgecolor='darkred', label='n=%d' % df_in_low_d.index.size)
                 
-                
-                ax1.set_xlabel('Q vol')
-                ax1.set_ylabel('Pcp')
-                
-                ax1.grid(alpha=0.5)
-                ax1.legend(loc=0)
-                ax2.scatter(df_in.loc[:,'discharge_vol'].values,
-                           df_in.loc[:, 'pet'].values, facecolor='gray', edgecolor='k', alpha=0.2)
-                ax2.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
-                           df_in_low_d.loc[:, 'pet'].values, facecolor='b', edgecolor='darkblue', marker='o')
-                # ax2.scatter(df_in_low_d1.loc[:,'discharge_vol'].values,
-                           # df_in_low_d1.loc[:, 'pet'].values, marker='o', facecolor='b', edgecolor='darkred', label='n=%d' % df_in_low_d.index.size)
-                
-                ax2.set_xlabel('Q vol')
-                ax2.set_ylabel('Pet')
-                
-                ax2.grid(alpha=0.5)
-                
-                ax3.scatter(df_in.loc[:,'discharge_vol'].values,
-                           df_in.loc[:, 'temperature'].values, facecolor='gray', edgecolor='k', alpha=0.2)
-                ax3.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
-                           df_in_low_d.loc[:, 'temperature'].values, facecolor='g', edgecolor='darkgreen', marker='D')
-                
-                ax3.set_xlabel('Q vol')
-                ax3.set_ylabel('temperature')
-                ax3.grid(alpha=0.5)
-                
-                
-                ax5.scatter(df_in.loc[:,'discharge_vol'].values,
-                           df_in.loc[:, 'humidity'].values, facecolor='gray', edgecolor='k', alpha=0.2)
-                ax5.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
-                           df_in_low_d.loc[:, 'humidity'].values, facecolor='orange', edgecolor='darkorange', marker='X')
-                
-                ax5.set_xlabel('Q vol')
-                ax5.set_ylabel('humidity')
-                ax5.grid(alpha=0.5)
-                
-                ax6.scatter(df_in.loc[:,'discharge_vol'].values,
-                           df_in.loc[:, 'longwave_rad'].values, facecolor='gray', edgecolor='k', alpha=0.2)
-                ax6.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
-                           df_in_low_d.loc[:, 'longwave_rad'].values, facecolor='g', edgecolor='darkgreen', marker='D')
-                
-                ax6.set_xlabel('Q vol')
-                ax6.set_ylabel('longwave_rad')
-                ax6.grid(alpha=0.5)
-                
-                ax7.scatter(df_in.loc[:,'discharge_vol'].values,
-                           df_in.loc[:, 'windspeed'].values, facecolor='gray', edgecolor='k', alpha=0.2)
-                ax7.scatter(df_in_low_d.loc[:,'discharge_vol'].values,
-                           df_in_low_d.loc[:, 'windspeed'].values, facecolor='m', edgecolor='pink')
-                
-                ax7.set_xlabel('Q vol')
-                ax7.set_ylabel('windspeed')
-                ax7.grid(alpha=0.5)
-                
-                plt.tight_layout()
-                
-                plt.savefig(out_save_dir_stn / (r'low_d_evt_%s22_pos.png' % (stn)), bbox_inches='tight')
-                plt.close('all')
-                
-                
-                
-                print('done calculating depth')
+            print('done calculating depth')
         
         
         
-        # df_all_events.dropna(axis=1, how='all').dropna(axis=0, how='all').to_csv(
-            # out_save_dir / r'all_events_stn.csv', sep=';')
+        df_all_events.dropna(axis=1, how='all').dropna(axis=0, how='all').to_csv(
+            out_save_dir / r'all_events_stn_dQ.csv', sep=';')
     #===========================================================================
     # In this study, we normalized the data
     # depth between 0 and 1 by dividing the depth by half the total
