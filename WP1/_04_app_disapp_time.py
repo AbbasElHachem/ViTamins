@@ -99,12 +99,12 @@ def main():
     # in_refr_var_file = (
     #     r"X:\staff\elhachem\ClimXtreme\03_data\00_DWD\60min_data\P00020_60min_data_2004_2019.csv")
     # in_test_var_file = main_dir / r'valid_kfold_01__cats_outflow.csv'
-
+    min_pcp_thr = 0
     n_uvecs = int(1e4)
     n_cpus = 7  # 'auto'
-    n_dims = 3
-    ws = 20#int(20 * 365 // n_dims)  # window size
-    analysis_style = 'un_peel'
+    n_dims = 6
+    ws = 30#int(20 * 365 // n_dims)  # window size
+    analysis_style = 'peel'
     time_win_type = 'year'  # 'month'
     n_ticks = 12
     cmap = 'jet'  # 'viridis'
@@ -124,15 +124,13 @@ def main():
     max_allowed_corr = 0.5
     app_dis_cb_max = 10
 
-    n_vecs = 1e4
-    min_pcp_thr = 0.2
     sel_idxs_flag = False
     take_rest_flag = False
     ann_flag = False
     plot_flag = False
 
-    # sel_idxs_flag = False
-    # take_rest_flag = False
+#     sel_idxs_flag = True
+#     take_rest_flag = True
     ann_flag = True
     plot_flag = True
 
@@ -168,7 +166,7 @@ def main():
 
                 print('out_dir:', out_dir)
 
-                # hdf5_path = Path(out_dir) / 'app_dis_ds.hdf5'
+                hdf5_path = Path(out_dir) / ('app_dis_ds_%s.hdf5' % _dwd_id)
 
                 if ann_flag:
                     #         with open(in_var_file, 'rb') as _hdl:
@@ -311,11 +309,11 @@ def main():
                     ad_ans.save_outputs_to_hdf5_on_off(
                         True, hdf_flush_flag)
 
-                    ad_ans.save_volume_data_level(vol_data_lev, loo_flag)
+                    # ad_ans.save_volume_data_level(vol_data_lev, loo_flag)
 
                     ad_ans.verify()
 
-            #         ad_ans.resume_from_hdf5(hdf5_path)
+                    # ad_ans.resume_from_hdf5(hdf5_path)
 
                     ad_ans.cmpt_appear_disappear()
                     ad_ans.terminate_analysis()
@@ -337,7 +335,7 @@ def main():
 
                     ad_plot.set_outputs_directory(out_dir)
                     ad_plot.set_fig_props(n_ticks, cmap, app_dis_cb_max)
-                    ad_plot.verify()
+                    # ad_plot.verify()
 
                     ad_plot.plot_app_dis()
 

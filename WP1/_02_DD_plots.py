@@ -171,14 +171,14 @@ def main():
                                         # usph_vecs, n_cpus, 1)
             
             points = np.array([(x, y) for x, y in zip(depths_da_da/ norm_fact_4d, depths_da_db/ norm_fact_4d)])
-            hull = ConvexHull(points)
+            hull = ConvexHull(shifted_var_arr_orig)
                                    
             plt.ioff()                
             fig, ax = plt.subplots(1,1, dpi=300, figsize=(4, 4))
             
             ax.plot([0, 1], [0, 1], c='r', linestyle='--', alpha=0.75)
             ax.scatter(depths_da_da / norm_fact_4d , depths_da_db / norm_fact_4d, s=5,
-                       marker='o', edgecolor='k', facecolor='gray', alpha=0.4, label='C-Hull A=%0.2f - n=%d' % (hull.area, cmn_idx.size))
+                       marker='o', edgecolor='k', facecolor='gray', alpha=0.4, label='C-Hull A=%0.2f - n=%d' % (hull.volume, cmn_idx.size))
             ax.legend(loc=0, ncols=2)
             ax.set_xlabel(r'$D_{\alpha}(x)$')
             ax.set_ylabel(r'$D_{\beta}(x)$')
