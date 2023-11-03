@@ -40,7 +40,12 @@ def main():
     var_to_test = 'discharge_vol'
     
     path_to_data = data_path / (r'Data/CAMELS_GB_1440min_1970_2015_%s.h5' % var_to_test)
-
+    
+    path_LSTM = pd.read_csv(r"https://raw.githubusercontent.com/KIT-HYD/Hy2DL/main/results/models/LSTM/LSTM_discharge.csv",
+                            index_col=0, parse_dates=True)
+    
+    path_LSTM_shm = pd.read_csv(r"https://raw.githubusercontent.com/KIT-HYD/Hy2DL/main/results/models/LSTM_SHM/LSTM_SHM_discharge.csv",
+                            index_col=0, parse_dates=True)
     #===========================================================================
     # Depth func parameters
     n_vecs = int(1e4)
