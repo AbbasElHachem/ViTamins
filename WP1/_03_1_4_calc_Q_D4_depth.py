@@ -88,11 +88,16 @@ def main():
     
     catch_ids_to_use = path_LSTM_shm.columns
     
+    df_results = pd.DataFrame(index=catch_ids_to_use,
+                              columns=['n_obsv', 'n_lstm', 'n_lstm_shm', 'n_obsv_lstm', 'n_obsv_lstm_shm', 'n_lstm_lstm_shm', 'nse_lstm', 'nse_lstm_shm'])
+    
     # df_coords_to_use = df_coords.loc[catch_ids_to_use, :]
     # df_coords_to_use.to_csv(r"X:\staff\elhachem\2023_09_01_ViTaMins\Data\coords_60_EZG_Roberto.csv")
     for catch_id in tqdm.tqdm(catch_ids_to_use):
         # if catch_id == '14002':
-        # print(catch_id)
+        print(catch_id)
+        # catch_id = '27003'
+        # catch_id = '12001'
         # break
         df_stn = data_hdf5.get_pandas_dataframe(catch_id)
         df_stn = df_stn.dropna(how='all')
@@ -157,8 +162,8 @@ def main():
         depths_da_da_low_lstm_shm = df_lstm_shm_shift_nonan.d[(1 <= df_lstm_shm_shift_nonan.d) & (df_lstm_shm_shift_nonan.d <=4)]
         
         
-        dq_m = depths_da_da_low.index - pd.Timedelta(days=4)
-        dq_p = depths_da_da_low.index + pd.Timedelta(days=4)
+        dq_m = depths_da_da_low.index - pd.Timedelta(days=2)
+        dq_p = depths_da_da_low.index + pd.Timedelta(days=2)
         
         dq_m_lstm = depths_da_da_low_lstm.index - pd.Timedelta(days=4)
         dq_p_lstm = depths_da_da_low_lstm.index + pd.Timedelta(days=4)
@@ -173,146 +178,242 @@ def main():
         
         cmn_low_lstm = depths_da_da_low_lstm.index.intersection(depths_da_da_low.index)
         cmn_low_lstm_shm = depths_da_da_low_lstm_shm.index.intersection(depths_da_da_low.index)
+        cmn_low_lstm_lstm_shm = depths_da_da_low_lstm_shm.index.intersection(depths_da_da_low_lstm.index)
+        
+        diff_low_lstm = depths_da_da_low_lstm.index.difference(depths_da_da_low.index)
+        diff_low_lstm_shm = depths_da_da_low.index.difference(depths_da_da_low_lstm_shm.index)
+        diff_low_lstm_lstm_shm = depths_da_da_low_lstm_shm.index.difference(depths_da_da_low_lstm.index)
+        
         
         print(cmn_low_lstm.shape, cmn_low_lstm_shm.shape)
+        
+        df_results.loc[catch_id, :] = [depths_da_da_low.index.shape[0], depths_da_da_low_lstm.index.shape[0], depths_da_da_low_lstm_shm.index.shape[0],
+                                       cmn_low_lstm.shape[0], cmn_low_lstm_shm.shape[0], cmn_low_lstm_lstm_shm.shape[0], nse_lstm, nse_lstm_shm]
         
         
         merged_all_tdx = list(itertools.chain(*datetime_idx))
         
         
-        plt.ioff()
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4), dpi=300, sharey=True, sharex=True)
-        
-        ax1.scatter(depths_da_Q, depths_da_Q_lstm, facecolor='gray', edgecolor='k', marker='o', label='LSTM')
-        # ax1.scatter(depths_da_da_low.values.ravel(), df_lstm_shift_nonan.loc[depths_da_da_low.index, 'd'], facecolor='r', edgecolor='darkred', marker='X', label='low-D')
-
-        ax2.scatter(depths_da_Q, depths_da_Q_lstm_shm, facecolor='k', edgecolor='gray', marker='D', label='LSTM-SHM')
-        # ax2.scatter(depths_da_da_low.values.ravel(), df_lstm_shm_shift_nonan.loc[depths_da_da_low.index, 'd'], facecolor='darkred', edgecolor='r', marker='D', label='Low-D')
-        
-        ax1.set_ylabel('Depth model')
-        ax1.set_xlabel('Depth observed')
-        ax1.set_xlabel('Depth observed')
-        
-        ax1.plot([0, max(df_orig_shift_nonan.d.max(), df_lstm_shift_nonan.d.max())], 
-                 [0, max(df_orig_shift_nonan.d.max(), df_lstm_shift_nonan.d.max())], 'b-.')
-        ax2.plot([0, max(df_orig_shift_nonan.d.max(), df_lstm_shift_nonan.d.max())], 
-                 [0, max(df_orig_shift_nonan.d.max(), df_lstm_shift_nonan.d.max())], 'b-.')
-        
-        ax1.grid(alpha=0.5)
-        ax2.grid(alpha=0.5)
-        ax1.legend(loc=0)
-        ax2.legend(loc=0)
-        plt.tight_layout()
-        plt.savefig(os.path.join(out_save_dir, r"obsv_model_4q_%s.png" % (catch_id)), bbox_inches='tight')
-        plt.close()
-        
-        plt.ioff()
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4), dpi=300, sharey=True, sharex=True)
-        
+        # plt.ioff()
+        # fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4), dpi=300, sharey=False, sharex=False)
+        #
         # ax1.scatter(depths_da_Q, depths_da_Q_lstm, facecolor='gray', edgecolor='k', marker='o', label='LSTM')
-        ax1.scatter(depths_da_da_low.values.ravel(), df_lstm_shift_nonan.loc[depths_da_da_low.index, 'd'], facecolor='b',
-                     edgecolor='darkblue', marker='X', label='LSTM n=%0.1f' % cmn_low_lstm.shape[0] / cmn_low_lstm.shape)
+        # # ax1.scatter(depths_da_da_low.values.ravel(), df_lstm_shift_nonan.loc[depths_da_da_low.index, 'd'], facecolor='r', edgecolor='darkred', marker='X', label='low-D')
+        #
+        # ax2.scatter(depths_da_Q, depths_da_Q_lstm_shm, edgecolor='darkblue', facecolor='b', marker='X', label='LSTM-SHM')
+        # # ax2.scatter(depths_da_da_low.values.ravel(), df_lstm_shm_shift_nonan.loc[depths_da_da_low.index, 'd'], facecolor='darkred', edgecolor='r', marker='D', label='Low-D')
+        # ax3.scatter(depths_da_Q_lstm, depths_da_Q_lstm_shm, edgecolor='darkgreen', facecolor='g', marker='d', label='Models')
+        #
+        # ax1.set_ylabel('Depth model LSTM')
+        # ax1.set_xlabel('Depth observed')
+        #
+        # ax2.set_ylabel('Depth model LSTM-SHM')
+        # ax2.set_xlabel('Depth observed')
+        #
+        # ax3.set_ylabel('Depth model LSTM-SHM')
+        # ax3.set_xlabel('Depth model LSTM')
+        #
+        # ax1.plot([0, max(df_orig_shift_nonan.d.max(), df_lstm_shift_nonan.d.max())], 
+        #          [0, max(df_orig_shift_nonan.d.max(), df_lstm_shift_nonan.d.max())], 'r-.')
+        # ax2.plot([0, max(df_orig_shift_nonan.d.max(), df_lstm_shm_shift_nonan.d.max())], 
+        #          [0, max(df_orig_shift_nonan.d.max(), df_lstm_shm_shift_nonan.d.max())], 'r-.')
+        #
+        # ax3.plot([0, max(df_lstm_shm_shift_nonan.d.max(), df_lstm_shift_nonan.d.max())], 
+        #          [0, max(df_lstm_shm_shift_nonan.d.max(), df_lstm_shift_nonan.d.max())], 'r-.')
+        #
+        #
+        # ax1.grid(alpha=0.5)
+        # ax2.grid(alpha=0.5)
+        # ax3.grid(alpha=0.5)
+        # ax1.legend(loc=0)
+        # ax2.legend(loc=0)
+        # ax3.legend(loc=0)
+        # plt.tight_layout()
+        # plt.savefig(os.path.join(out_save_dir, r"obsv_model_4q_%s.png" % (catch_id)), bbox_inches='tight')
+        # plt.close()
+        
 
-        # ax2.scatter(depths_da_Q, depths_da_Q_lstm_shm, facecolor='k', edgecolor='gray', marker='D', label='LSTM-SHM')
-        ax2.scatter(depths_da_da_low.values.ravel(), df_lstm_shm_shift_nonan.loc[depths_da_da_low.index, 'd'], facecolor='darkred', edgecolor='r', marker='D', label='LSTM-SHM')
         
-        ax1.set_ylabel('Depth model')
+    #     plt.ioff()
+    #     fig, (ax1) = plt.subplots(1, 1, figsize=(8, 4), dpi=300, sharey=False, sharex=False)
+    #
+    #     ax1.scatter(df_lstm.loc[diff_low_lstm].index, df_lstm.loc[diff_low_lstm].values, c='r', marker='X', label='D not in Obsv')
+    #
+    #     ax1.plot(df_stn.index, df_stn.values, c='gray', label='obsv')
+    #     ax1.plot(df_lstm.index, df_lstm.values, c='g', label='LSTM')
+    #
+    #     ax1.grid(alpha=0.5)
+    #
+    #     ax1.set_ylabel('Q [m/s]')
+    #     ax1.set_xlabel('Time index')
+    # #    
+    #     plt.legend(loc=0)
+    #     plt.savefig(os.path.join(out_save_dir, r"tstep_q_%s_obsv_models.png" % (catch_id)), bbox_inches='tight')
+    #     plt.close()
+    #
+    #
+    #     plt.ioff()
+    #     fig, (ax1) = plt.subplots(1, 1, figsize=(8, 4), dpi=300, sharey=False, sharex=False)
+    #
+    #     ax1.scatter(df_lstm.loc[diff_low_lstm].loc['2010'].index, df_lstm.loc[diff_low_lstm].loc['2010'].values, c='r', marker='X', label='D')
+    #
+    #     ax1.plot(df_stn.loc['2010'].index, df_stn.loc['2010'].values, c='gray', label='obsv')
+    #     ax1.plot(df_lstm.loc['2010'].index, df_lstm.loc['2010'].values, c='g', label='LSTM')
+    #
+    #     ax1.grid(alpha=0.5)
+    #
+    #     ax1.set_ylabel('Q [m/s]')
+    #     ax1.set_xlabel('Time index')
+    # #    
+    #     plt.legend(loc=0)
+    #     plt.savefig(os.path.join(out_save_dir, r"tstep_q_%s_obsv_models2.png" % (catch_id)), bbox_inches='tight')
+    #     plt.close()
         
-        ax1.set_xlabel('Depth observed')
-        ax2.set_xlabel('Depth observed')
         
-        ax1.grid(alpha=0.5)
-        ax2.grid(alpha=0.5)
-        ax1.legend(loc=0)
-        ax2.legend(loc=0)
-        plt.tight_layout()
-        plt.savefig(os.path.join(out_save_dir, r"obsv_model_low_4q_%s.png" % (catch_id)), bbox_inches='tight')
-        plt.close()
+        
         
         # df_datetime_idx = pd.DatetimeIndex(merged_all_tdx)
         # df_qpm = pd.DataFrame(index=)
     
         
-        plt.ioff()
-        fig, ax1 = plt.subplots(1, 1, figsize=(12, 4), dpi=300)
-        
-        ax2 = ax1.twinx()
-        ax1.plot(df_stn.index, df_stn.values, c='gray') 
-        ax2.plot(df_stn_pcp.loc[cmn_idx_q_pcp].index, -df_stn_pcp.loc[cmn_idx_q_pcp].values, c='b', alpha=0.2) 
-        
-        for td_idx in datetime_idx:  
-            td_idx_cmn = df_stn.index.intersection(td_idx)         
-            ax2.plot(df_stn_pcp.loc[td_idx_cmn, :].index, -df_stn_pcp.loc[td_idx_cmn,:].values, c='b', alpha=0.25)
-            ax1.plot(df_stn.loc[td_idx_cmn, :].index, df_stn.loc[td_idx_cmn,:].values, c='r', alpha=0.5)
-        
-        for td_idx_lstm in datetime_idx_lstm: 
-            ax1.plot(df_stn.loc[td_idx_lstm, :].index, df_stn.loc[td_idx_lstm,:].values, c='g', alpha=0.5)
-            ax1.plot(df_stn.loc[td_idx_cmn, :].index, df_stn.loc[td_idx_cmn,:].values, c='r', alpha=0.5)
-
-
-            # break
-            
-        # ax2.set_ylim([-60, 0])
-        ax1.grid(alpha=0.5)
-        
-        ax2.set_ylabel('P [mm/d]', c='b')
-        ax1.set_ylabel('Q [m3/s]')
-        ax1.set_xlabel('Time index')
-    #
-        # plt.legend(loc=0)
-        plt.savefig(os.path.join(out_save_dir, r"tstep_q_%s_lstm.png" % (catch_id)), bbox_inches='tight')
-        plt.close()
-        
-        pass
-            
-        #     df_t_p1_d = pd.DataFrame(index=range(cmn_idx_length))
-        #     df_t_p1_d['Qt'] = df_in_vals_t
-        #     df_t_p1_d['Qtp1'] = df_in_vals_tp1
-        #     df_t_p1_d['d'] = depths_da_da
-        #     df_t_p1_d['d2'] = depths_da_da2
-        #     df_t_p1_d_low = df_t_p1_d['d'][(0 <= df_t_p1_d['d']) & (df_t_p1_d['d'] <=4)]
-        #     df_t_p1_d_low2 = df_t_p1_d['d2'][(0 <= df_t_p1_d['d2']) & (df_t_p1_d['d2'] <=4)]
-        #
-        #     # df_t_p1_d_low_idx = df_t_p1_d.iloc[df_t_p1_d_low.index,:]
+        # try:
         #     plt.ioff()
-        #     plt.figure(figsize=(4, 4), dpi=300)
+        #     fig, ax1 = plt.subplots(1, 1, figsize=(8, 4), dpi=300)
         #
-        #     plt.scatter(np.log(df_stn_t.iloc[:cmn_idx_length]),
-        #                  np.log(df_stn_tp1.iloc[:cmn_idx_length]), alpha=0.71, facecolor='k',edgecolor='gray', s=15)
-        #     plt.scatter(np.log(df_stn_t.iloc[:cmn_idx_length].iloc[df_t_p1_d_low.index]),
-        #                  np.log(df_stn_tp1.iloc[:cmn_idx_length].iloc[df_t_p1_d_low.index]), alpha=0.51, facecolor='r',edgecolor='darkred', s=15)
-        #     plt.scatter(np.log(df_stn_t.iloc[:cmn_idx_length].iloc[df_t_p1_d_low2.index]),
-        #                  np.log(df_stn_tp1.iloc[:cmn_idx_length].iloc[df_t_p1_d_low2.index]), alpha=0.51, facecolor='b',edgecolor='darkblue', s=15)
+        #     # ax2 = ax1.twinx()
+        #     ax1.plot(df_stn.index, df_stn.values, c='gray') 
+        #     # ax2.plot(df_stn_pcp.loc[cmn_idx_q_pcp].index, -df_stn_pcp.loc[cmn_idx_q_pcp].values, c='b', alpha=0.2) 
         #
-        #     plt.xlim([-1, 6])
-        #     plt.ylim([-1, 6])
-        #     plt.grid(alpha=0.5)
+        #     for td_idx in datetime_idx:  
+        #         td_idx_cmn = df_stn.index.intersection(td_idx)         
+        #         # ax2.plot(df_stn_pcp.loc[td_idx_cmn, :].index, -df_stn_pcp.loc[td_idx_cmn,:].values, c='b', alpha=0.25)
+        #         ax1.plot(df_stn.loc[td_idx_cmn, :].index, df_stn.loc[td_idx_cmn,:].values, c='r', alpha=0.5)
         #
+        #     ax1.grid(alpha=0.5)
         #
-        #     plt.ylabel('ln(Q(t+1))')
-        #
-        #     plt.xlabel('ln(Q(t))')
+        #     ax2.set_ylabel('P [mm/d]', c='b')
+        #     ax1.set_ylabel('Q [m/s]')
+        #     ax1.set_xlabel('Time index')
         # #
         #     # plt.legend(loc=0)
-        #     plt.savefig(r"X:\staff\elhachem\2023_09_01_ViTaMins\Results\00_Data_quality\scatter_q_%s.png" % (catch_id), bbox_inches='tight')
+        #     plt.savefig(os.path.join(out_save_dir, r"tstep_q_%s_obsv.png" % (catch_id)), bbox_inches='tight')
         #     plt.close()
-        # normalize by median
-        
-        # df_stn_norm_orig = df_stn# / df_stn.median()
-        # df_stn[df_stn > 90] = np.nan
-
- 
-
-
-
-
+        #
+        #     plt.ioff()
+        #     fig, ax2 = plt.subplots(1, 1, figsize=(8, 4), dpi=300)
+        #     ax2.plot(df_lstm.index, df_lstm.values, c='gray')
+        #     for td_idx_lstm in datetime_idx_lstm: 
+        #         cmns = df_lstm.index.intersection(td_idx_lstm)
+        #         ax2.plot(df_lstm.loc[cmns].index, df_lstm.loc[cmns].values, c='g', alpha=0.5)
+        #
+        #
+        #         # break
+        #
+        #     # ax2.set_ylim([-60, 0])
+        #     ax2.grid(alpha=0.5)
+        #
+        #     ax2.set_ylabel('P [mm/d]', c='b')
+        #     ax2.set_ylabel('Q [m/s]')
+        #     ax2.set_xlabel('Time index')
+        # #
+        #     # plt.legend(loc=0)
+        #     plt.savefig(os.path.join(out_save_dir, r"tstep_q_%s_lstm.png" % (catch_id)), bbox_inches='tight')
+        #     plt.close()
+        #
+        #
+        #     plt.ioff()
+        #     fig, ax2 = plt.subplots(1, 1, figsize=(8, 4), dpi=300)
+        #     ax2.plot(df_lstm_shm.index, df_lstm_shm.values, c='gray')
+        #     for td_idx_lstm_shm in datetime_idx_lstm_shm:
+        #         cmns = df_lstm_shm.index.intersection(td_idx_lstm_shm) 
+        #         ax2.plot(df_lstm_shm.loc[cmns].index, df_lstm_shm.loc[cmns].values, c='b', alpha=0.5)
+        #
+        #
+        #     ax2.grid(alpha=0.5)
+        #
+        #     ax2.set_ylabel('P [mm/d]', c='b')
+        #     ax2.set_ylabel('Q [m/s]')
+        #     ax2.set_xlabel('Time index')
+        # #
+        #     # plt.legend(loc=0)
+        #     plt.savefig(os.path.join(out_save_dir, r"tstep_q_%s_lstm_shm.png" % (catch_id)), bbox_inches='tight')
+        #     plt.close()
+        #
+        #     plt.ioff()
+        #     fig, ax1 = plt.subplots(1, 1, figsize=(8, 4), dpi=300)
+        #
+        #     # ax2 = ax1.twinx()
+        #
+        #
+        #     # ax1.scatter(df_stn.values, df_lstm.values, label='LSTM', c='g', alpha=0.5, marker='x')
+        #     # ax1.scatter(df_stn.values, df_lstm_shm.values, label='LSTM-SHM', c='b', alpha=0.5, marker='d')
+        #     # ax1.scatter(df_stn.values, df_stn.values, label='Obsv', c='r', alpha=0.5, marker='.')
+        #     ax1.plot(df_stn.index, df_stn.values, c='r', label='obsv', alpha=0.75)
+        #     ax1.plot(df_lstm.index, df_lstm.values, c='g', label='LSTM', alpha=0.75)
+        #     # ax1.plot(df_lstm_shm.index, df_lstm_shm.values, c='b', label='LSTM-SHM')
+        #     ax1.grid(alpha=0.5)
+        #
+        #     ax1.set_ylabel('Model Q [m/s]')
+        #     ax1.set_xlabel('Observation Q [m/s]')
+        # #    
+        #     plt.legend(loc=0)
+        #     plt.savefig(os.path.join(out_save_dir, r"tstep_q_%s_obsv_models.png" % (catch_id)), bbox_inches='tight')
+        #     plt.close()
+            # pass
+        # except Exception as msg:
+            # print(msg)
+            # continue 
+    df_results.to_csv(os.path.join(out_save_dir, r"tstep_4q_lstm_shm.csv"))
     #===========================================================================
     # In this study, we normalized the data
     # depth between 0 and 1 by dividing the depth by half the total
     # number of points in the convex hull.
     #===========================================================================
     
+    df_results.head()
     
+    plt.ioff()
+    
+    fig, ax2 = plt.subplots(1, 1, figsize=(12, 6), dpi=300)
+    for _col in df_results.columns[:3]:
+        if _col == 'n_obsv':
+            
+            ax2.plot(df_results.index, df_results.loc[:, _col], label=_col, marker='x', c='r')
+        
+        else:
+            ax2.plot(df_results.index, df_results.loc[:, _col], label=_col)
+        
+        
+    ax2.grid(alpha=0.5)
+    ax2.legend(loc=0, ncols=3)
+    ax2.set_xticks(df_results.index)
+    ax2.set_xticklabels(df_results.index, rotation=90, fontsize=10)
+    ax2.set_ylabel('Number of unusual events 1<= d <=4')
+    
+    plt.savefig(os.path.join(out_save_dir, r"tstep_all.png"), bbox_inches='tight')
+    plt.close()
+    
+    plt.ioff()
+    fig, ax2 = plt.subplots(1, 1, figsize=(12, 6), dpi=300)
+    for _col in df_results.columns[3:5]:
+        # if _col == 'n_obsv':
+            
+            # ax2.plot(df_results.index, df_results.loc[:, _col], label=_col, marker='x', c='r')
+        
+        # else:
+        ax2.plot(df_results.index, 100*df_results.loc[:, _col]/df_results.iloc[:, 0], label=_col)
+        
+        
+    ax2.grid(alpha=0.5)
+    ax2.legend(loc=0, ncols=3)
+    ax2.set_xticks(df_results.index)
+    ax2.set_xticklabels(df_results.index, rotation=90, fontsize=10)
+    ax2.set_ylabel('Number of COMMON unusual events 1<= d <=4')
+    
+    plt.savefig(os.path.join(out_save_dir, r"tstep_all_cmn.png"), bbox_inches='tight')
+    plt.close()
+    
+            
     pass
 
 
