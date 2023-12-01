@@ -121,6 +121,7 @@ def main():
         if True:#not os.path.exists(out_save_dir / (r'%s_1d_2.png' % (catch_id))):
             print(catch_id)
             # break
+            catch_id = '12001'
             df_stn = data_hdf5.get_pandas_dataframe_between_dates(
                 catch_id, event_start=beg_date, event_end=end_date)
             df_stn = df_stn.dropna(how='all')
@@ -234,10 +235,10 @@ def main():
             low_d_obsv_shm = np.where([depths_da_lstm_shm_obsv == 0])[1]
             low_d_shm_obsv = np.where([depths_da_obsv_lstm_shm == 0])[1]
             
-            low_d_orig_vals = depths_da_osv_lstm[low_d_lstm]
-            low_d_lstmm_vals = depths_da_lstm_obs[low_d_lstm]
-            low_d_orig_shm_vals = depths_da_lstm_shm_obsv[low_d_obsv_shm]
-            low_d_shm_orig_vals = depths_da_obsv_lstm_shm[low_d_lstm]
+            # low_d_orig_vals = depths_da_osv_lstm[low_d_lstm]
+            # low_d_lstmm_vals = depths_da_lstm_obs[low_d_lstm]
+            # low_d_orig_shm_vals = depths_da_lstm_shm_obsv[low_d_obsv_shm]
+            # low_d_shm_orig_vals = depths_da_obsv_lstm_shm[low_d_lstm]
             
             low_Q_orig_vals = shifted_var_arr_orig[low_d_orig]
             low_Q_lstmm_vals = shifted_var_arr_orig[low_d_lstm]

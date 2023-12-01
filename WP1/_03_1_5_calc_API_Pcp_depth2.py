@@ -48,7 +48,7 @@ def main():
     
     n_vecs = int(1e4)
     n_cpus = 7
-    
+    plot_figs = False
     alpha = 0.9
     time_steps_shift = [1, 2, 3, 4]
     
@@ -84,14 +84,15 @@ def main():
     
     usph_vecs_dQ = gen_usph_vecs_mp(n_vecs, 4, n_cpus)
     
+    df_rlt_all = pd.DataFrame(index=path_LSTM.columns, columns=['lstm', 'lstm-shm'])
     catch_ids_to_use = path_ids_abv_150.index.astype(str).intersection(catch_ids)
     for catch_id in tqdm.tqdm(path_LSTM.columns):
         # if catch_id == '14002':
         # print(catch_id)
         # break
         
-        if not os.path.exists(os.path.join(out_save_dir, r"tstep_api_%s_heatmap.png" % (catch_id))):
-                
+        if True:#not os.path.exists(os.path.join(out_save_dir, r"tstep_api_%s_heatmap.png" % (catch_id))):
+            catch_id = '15016'
             df_stn = data_hdf5.get_pandas_dataframe(catch_id)
             df_stn = df_stn.dropna(how='all')
             
@@ -253,73 +254,73 @@ def main():
             
             df_stn_api_low_d = df_API.loc[depths_da_da_low.index, :]
             # df_stn_pcp_low_d = df_stn_pcp.loc[merged_all_tdx, :]
+            if plot_figs:
+                plt.ioff()
+                plt.figure(figsize=(8, 6), dpi=300)
+                plt.plot(df_API.index,df_API.values, label='API', c='gray') 
+                plt.plot(df_stn_pcp.index, df_stn_pcp.values.ravel(), linewidth=1., label='Pcp')
+        
+                plt.scatter(df_stn_api_low_d.index, df_stn_api_low_d.values, facecolor='r', edgecolor='darkred', label='1<=D<=4', marker='X', s=50)
+                
+                
+                plt.grid(alpha=0.5)
+                plt.tight_layout()
+                plt.legend()
+                plt.ylabel('mm/d')
+                plt.savefig(os.path.join(out_save_dir, r"P_api_%s.png" % (catch_id)), bbox_inches='tight')
+                plt.close()
+                #merged_all_tdx = list(itertools.chain(*datetime_idx))
+                plt.ioff()
+                plt.figure(figsize=(8, 6), dpi=300)
+                plt.bar(df_stn_pcp.loc[df_stn_pcp.index.intersection(
+                    merged_all_tdx), :].index, height=df_stn_pcp.loc[df_stn_pcp.index.intersection(
+                    merged_all_tdx), :].values.ravel(), width=20, facecolor='r', edgecolor='r', label='Pcp-D')
+        
+                plt.plot(df_stn_pcp.index, df_stn_pcp.values.ravel(), linewidth=1., label='Pcp', alpha=0.5)
+                plt.grid(alpha=0.5)
+                plt.tight_layout()
+                plt.legend()
+                plt.ylabel('mm/d')
+                plt.savefig(os.path.join(out_save_dir, r"P_api_%s_low_d.png" % (catch_id)), bbox_inches='tight')
+                plt.close()
             
-            plt.ioff()
-            plt.figure(figsize=(8, 6), dpi=300)
-            plt.plot(df_API.index,df_API.values, label='API', c='gray') 
-            plt.plot(df_stn_pcp.index, df_stn_pcp.values.ravel(), linewidth=1., label='Pcp')
-    
-            plt.scatter(df_stn_api_low_d.index, df_stn_api_low_d.values, facecolor='r', edgecolor='darkred', label='1<=D<=4', marker='X', s=50)
-            
-            
-            plt.grid(alpha=0.5)
-            plt.tight_layout()
-            plt.legend()
-            plt.ylabel('mm/d')
-            plt.savefig(os.path.join(out_save_dir, r"P_api_%s.png" % (catch_id)), bbox_inches='tight')
-            plt.close()
-            #merged_all_tdx = list(itertools.chain(*datetime_idx))
-            plt.ioff()
-            plt.figure(figsize=(8, 6), dpi=300)
-            plt.bar(df_stn_pcp.loc[df_stn_pcp.index.intersection(
-                merged_all_tdx), :].index, height=df_stn_pcp.loc[df_stn_pcp.index.intersection(
-                merged_all_tdx), :].values.ravel(), width=20, facecolor='r', edgecolor='r', label='Pcp-D')
-    
-            plt.plot(df_stn_pcp.index, df_stn_pcp.values.ravel(), linewidth=1., label='Pcp', alpha=0.5)
-            plt.grid(alpha=0.5)
-            plt.tight_layout()
-            plt.legend()
-            plt.ylabel('mm/d')
-            plt.savefig(os.path.join(out_save_dir, r"P_api_%s_low_d.png" % (catch_id)), bbox_inches='tight')
-            plt.close()
-            
-            #=======================================================================
-            # 
-            #=======================================================================
-            plt.ioff()
-            fig, ax1 = plt.subplots(1, 1, figsize=(6, 4), dpi=300)
-            ax1.scatter(df_stn_pcp_low_d.values, df_q_obsv_low_d.values, label='Obsv Q', facecolor='r', edgecolor='darkred', marker='D', alpha=0.75)
-            ax1.scatter(df_stn_pcp_low_d.values, df_q_lstm_low_d.values, label='LSTM Q', facecolor='b', edgecolor='darkblue', marker='X', alpha=0.25)
-            ax1.scatter(df_stn_pcp_low_d.values, df_q_lstm_shm_low_d.values, label='LSTM-SHM Q', marker='o', facecolor='g', edgecolor='darkgreen', alpha=0.25)
-            ax1.grid(alpha=0.75)
-            
-            ax1.set_xlabel('P [mm/d]')
-            ax1.set_ylabel('Q [m/s]')
-            plt.legend(loc=0)
-            plt.savefig(os.path.join(out_save_dir, r"tstep_api_%s_Q_P.png" % (catch_id)), bbox_inches='tight')
-            plt.close()
-            
-            #=======================================================================
-            # 
-            #=======================================================================
-            plt.ioff()
-            fig, ax1 = plt.subplots(1, 1, figsize=(6, 4), dpi=300)
-            ax1.scatter(df_api_obsv_low_d.values, df_api_obsv_low_d.values, label='Obsv API', facecolor='k', edgecolor='gray', marker=',', alpha=0.75)
-            
-            ax1.scatter(df_api_obsv_low_d.values, df_d_obsv_low_d.values, label='Obsv Q', facecolor='r', edgecolor='darkred', marker='D', alpha=0.75)
-            ax1.scatter(df_api_obsv_low_d.values, df_d_lstm_low_d.values, label='LSTM Q', facecolor='b', edgecolor='darkblue', marker='X', alpha=0.25)
-            ax1.scatter(df_api_obsv_low_d.values, df_d_lstm_shm_low_d.values, label='LSTM-SHM Q', marker='o', facecolor='g', edgecolor='darkgreen', alpha=0.25)
-            ax1.grid(alpha=0.75)
-            
-            ax1.set_xlabel('Depth API (+- 2 days)')
-            ax1.set_ylabel('Depth Q')
-            plt.xlim([0, 15])
-            plt.ylim([0, 15])
-            plt.legend(loc=0)
-            plt.savefig(os.path.join(out_save_dir, r"tstep_api_%s_Q_P_D.png" % (catch_id)), bbox_inches='tight')
-            plt.close()
+                #=======================================================================
+                # 
+                #=======================================================================
+                plt.ioff()
+                fig, ax1 = plt.subplots(1, 1, figsize=(6, 4), dpi=300)
+                ax1.scatter(df_stn_pcp_low_d.values, df_q_obsv_low_d.values, label='Obsv Q', facecolor='r', edgecolor='darkred', marker='D', alpha=0.75)
+                ax1.scatter(df_stn_pcp_low_d.values, df_q_lstm_low_d.values, label='LSTM Q', facecolor='b', edgecolor='darkblue', marker='X', alpha=0.25)
+                ax1.scatter(df_stn_pcp_low_d.values, df_q_lstm_shm_low_d.values, label='LSTM-SHM Q', marker='o', facecolor='g', edgecolor='darkgreen', alpha=0.25)
+                ax1.grid(alpha=0.75)
+                
+                ax1.set_xlabel('P [mm/d]')
+                ax1.set_ylabel('Q [m/s]')
+                plt.legend(loc=0)
+                plt.savefig(os.path.join(out_save_dir, r"tstep_api_%s_Q_P.png" % (catch_id)), bbox_inches='tight')
+                plt.close()
+                
+                #=======================================================================
+                # 
+                #=======================================================================
+                plt.ioff()
+                fig, ax1 = plt.subplots(1, 1, figsize=(6, 4), dpi=300)
+                ax1.scatter(df_api_obsv_low_d.values, df_api_obsv_low_d.values, label='Obsv API', facecolor='k', edgecolor='gray', marker=',', alpha=0.75)
+                
+                ax1.scatter(df_api_obsv_low_d.values, df_d_obsv_low_d.values, label='Obsv Q', facecolor='r', edgecolor='darkred', marker='D', alpha=0.75)
+                ax1.scatter(df_api_obsv_low_d.values, df_d_lstm_low_d.values, label='LSTM Q', facecolor='b', edgecolor='darkblue', marker='X', alpha=0.25)
+                ax1.scatter(df_api_obsv_low_d.values, df_d_lstm_shm_low_d.values, label='LSTM-SHM Q', marker='o', facecolor='g', edgecolor='darkgreen', alpha=0.25)
+                ax1.grid(alpha=0.75)
+                
+                ax1.set_xlabel('Depth API (+- 2 days)')
+                ax1.set_ylabel('Depth Q')
+                plt.xlim([0, 15])
+                plt.ylim([0, 15])
+                plt.legend(loc=0)
+                plt.savefig(os.path.join(out_save_dir, r"tstep_api_%s_Q_P_D.png" % (catch_id)), bbox_inches='tight')
+                plt.close()
             # '4 < D <=10',
-            df_rlt = pd.DataFrame(index=['1 <= D <=4',  '10 < D'],
+            df_rlt = pd.DataFrame(index=['1 <= D <=10',  '10 < D'],
                                   columns=['Obsv', 'LSTM', 'LSTM-SHM'], data=1.)
             api_b4, api_4_10, api_10 = [], [], []
             o_b4, o_4_10, o_10 = [], [], []
@@ -369,14 +370,29 @@ def main():
             df_rlt.loc['10 < D',:] = [len(o_10)/len(api_b4),
                    len(ls_10)/len(api_b4), len(ls_sh_10)/len(api_b4)]
             
+            if len(ls_b4) > len(ls_sh_b4):
+                df_rlt_all.loc[catch_id, 'lstm'] = 1
+                
+            if len(ls_sh_b4) > len(ls_b4):
+                df_rlt_all.loc[catch_id, 'lstm-shm'] = 1
             # plt.matshow()
             # plt.colorbar(shrink=0.7)
-            plt.ioff()
-            plt.figure(figsize=(4,3), dpi=300)
-            plt.title('n=%d - NSE LSTM=%0.2f - LSTM-SHM=%0.2f' % (len(api_b4), nse_lstm, nse_lstm_shm))
-            sn.heatmap(100*df_rlt, annot=True, cmap=plt.get_cmap('jet'))
-            plt.savefig(os.path.join(out_save_dir, r"tstep_api_%s_heatmap.png" % (catch_id)), bbox_inches='tight')
-            plt.close()
+            
+            
+            if plot_figs:
+                plt.ioff()
+                plt.figure(figsize=(4,3), dpi=300)
+                plt.title('n=%d - NSE LSTM=%0.2f - LSTM-SHM=%0.2f' % (len(api_b4), nse_lstm, nse_lstm_shm))
+                sn.heatmap(100*df_rlt, annot=True, cmap=plt.get_cmap('jet'))
+                plt.savefig(os.path.join(out_save_dir, r"tstep_api_%s_heatmap.png" % (catch_id)), bbox_inches='tight')
+                plt.close()
+                
+    df_rlt_all.to_csv(os.path.join(out_save_dir, r"tstep_api_all_heatmap.csv" ))
+    df_rlt_all.dropna(how='all')
+    
+    df_rlt_all.sum(axis=0)/df_rlt_all.index.shape[0]
+    
+    pass
         # df_rlt.sum(axis=0)
                 
                 # api_b4.append(_d)
